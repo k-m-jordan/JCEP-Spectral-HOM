@@ -6,6 +6,7 @@
 #include <QFileDialog>
 #include <QProgressDialog>
 #include <QThreadPool>
+#include <QCoreApplication>
 
 #include "qcustomplot.h"
 
@@ -170,7 +171,8 @@ void MainWindow::deleteAllFiles() {
     unsigned files_deleted = mOpenImages.size();
 
     // remove all open display tabs
-    for(auto &tab_pair : mOpenFileViewTabs) {
+    while(!mOpenFileViewTabs.empty()) {
+        auto &tab_pair = *mOpenFileViewTabs.begin();
         auto tab_ix = mTabContainer->indexOf(tab_pair.second);
         closeFileTab(tab_ix);
     }

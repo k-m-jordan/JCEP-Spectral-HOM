@@ -197,6 +197,13 @@ namespace spec_hom {
         QLabel *mMinClusterSizeLabel;
         QSpinBox *mMinClusterSizeEdit;
 
+        QGroupBox *mCoincidenceSettingsWidget;
+        QVBoxLayout *mCoincidenceSettingsLayout;
+        QWidget *mCoincidenceWindowWidget;
+        QHBoxLayout *mCoincidenceWindowLayout;
+        QLabel *mCoincidenceWindowLabel;
+        QLineEdit *mCoincidenceWindowEdit;
+
         QLabel *mBottomText;
 
     };

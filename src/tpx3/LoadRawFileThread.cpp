@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <vector>
 #include <set>
+#include <cmath>
 
 #include <tim/timsort.h>
 
@@ -171,7 +172,7 @@ PixelData LoadRawFileThread::parseRawData() {
                     int64_t toa = static_cast<int64_t>((static_cast<uint64_t>(combined_coarse) << 4) | chip_fine_toa);
 
                     if(tot < mImportSettings.totCorrection.size())
-                        toa += static_cast<int>(mImportSettings.totCorrection[tot]/MIN_TICK);
+                        toa += static_cast<int>(std::round(mImportSettings.totCorrection[tot]/MIN_TICK));
 
                     toa_vec.push_back(
                         toa
@@ -392,10 +393,10 @@ ClusterData LoadRawFileThread::cluster(const PixelData &raw_data) {
 
 }
 
-std::vector<ClusterEvent> LoadRawFileThread::centroid(const PixelData &data, const ClusterData &clusters) {
+std::vector<ClusterCentroid> LoadRawFileThread::centroid(const PixelData &data, const ClusterData &clusters) {
 
     // array to hold centroided xyt positions
-    std::vector<ClusterEvent> events;
+    std::vector<ClusterCentroid> events;
     events.resize(clusters.num_clusters);
 
     std::vector<double> cluster_x_weighted_sums(clusters.num_clusters, 0);
@@ -435,6 +436,9 @@ std::vector<ClusterEvent> LoadRawFileThread::centroid(const PixelData &data, con
 
         if((ix % (data.numPackets()/100)) == 0)
             emit setProgress(static_cast<int>(100*static_cast<double>(ix)/data.numPackets()));
+
+        if(shouldCancel())
+            return {};
     }
 
     for(auto ix = 0; ix < clusters.num_clusters; ++ix) {
@@ -450,6 +454,90 @@ std::vector<ClusterEvent> LoadRawFileThread::centroid(const PixelData &data, con
 
 }
 
+std::pair<std::vector<CoincidencePair>, std::vector<CoincidenceNFold>> LoadRawFileThread::findCoincidences(const ClusterData &clusters, const std::vector<ClusterCentroid> &centroids) {
+
+    std::vector<CoincidencePair> coinc_pairs;
+    std::vector<CoincidenceNFold> coinc_nfolds;
+
+    double window_size = mImportSettings.coincidenceWindow;
+
+    // we first need a time-ordered list of all centroids
+    std::vector<unsigned> sorted_indices;
+    sorted_indices.reserve(clusters.num_clusters);
+    for(auto ix = 0; ix < clusters.num_clusters; ++ix)
+        sorted_indices.push_back(ix);
+
+    emit setProgressText("Sorting centroids...");
+    emit setProgressIndefinite(true);
+
+    std::sort(sorted_indices.begin(), sorted_indices.end(), [&centroids](auto lhs, auto rhs){
+        return centroids[lhs].toa < centroids[rhs].toa;
+    });
+
+    emit setProgressText("Finding coincidences...");
+    emit setProgress(0);
+    emit setProgressIndefinite(false);
+
+    unsigned one_percent_clusters = clusters.num_clusters / 100 + 1;
+    int last_progress = 0;
+
+    std::vector<unsigned> curr_coinc;
+
+    for(auto ix = 0; ix < clusters.num_clusters; ++ix) {
+        auto progress = static_cast<int>(static_cast<double>(ix) / one_percent_clusters);
+        if(progress != last_progress) {
+            setProgress(progress);
+            last_progress = progress;
+        }
+        if(shouldCancel())
+            return {};
+
+        auto toa = centroids[sorted_indices[ix]].toa;
+
+        // difference between current toa and ix's toa
+        bool within_window = true;
+        unsigned offset = 1;
+        while(within_window) {
+            if(ix+offset >= clusters.num_clusters)
+                break;
+
+            auto curr_toa = centroids[sorted_indices[ix + offset]].toa;
+            auto dtoa = curr_toa - toa;
+
+            if(dtoa <= window_size) {
+                if(offset == 1) // only two coincidences so far
+                    curr_coinc.push_back(sorted_indices[ix]); // add the first index
+                curr_coinc.push_back(sorted_indices[ix+offset]); // add the second (third, fourth...) index
+                ++offset;
+            } else {
+                within_window = false;
+            }
+        }
+
+        if(offset == 1) {
+            // no coincidence found within window
+        } else {
+            if(curr_coinc.size() == 2) {
+                coinc_pairs.push_back({
+                    curr_coinc[0],
+                    curr_coinc[1]
+                });
+            } else {
+                coinc_nfolds.emplace_back(curr_coinc);
+            }
+            curr_coinc.clear();
+
+            ix += offset - 1; // skip any clusters already processed
+        }
+    }
+
+    std::cout << "Found " << coinc_pairs.size() << " pairs" << std::endl;
+    std::cout << "Found " << coinc_nfolds.size() << " n-fold coincidences" << std::endl;
+
+    return std::make_pair(std::move(coinc_pairs), std::move(coinc_nfolds));
+
+}
+
 void LoadRawFileThread::execute() {
 
     emit setProgress(0);
@@ -458,18 +546,18 @@ void LoadRawFileThread::execute() {
 
     PixelData data = parseRawData();
     if(shouldCancel()) { // either an error, or thread was cancelled
-        finish({}, {}, {});
+        finish();
         return;
     }
 
     if(mRawPacketsOnly) {
-        finish(std::move(data), {}, {});
+        finish(std::move(data), {}, {}, {}, {});
         return;
     }
 
     if(data.isEmpty()) {
         emit warn("No raw packets found within mask.");
-        finish({}, {}, {});
+        finish();
         return;
     }
 
@@ -477,24 +565,54 @@ void LoadRawFileThread::execute() {
     emit setProgressIndefinite(true); // switch to an indefinite progress bar
     sort_timestamps(data);
 
+    // emit a warning
+    bool zero_tot_corr = true;
+    for(auto x : mImportSettings.totCorrection)
+        zero_tot_corr &= (x == 0);
+    if(mImportSettings.minClusterSize < 3 && zero_tot_corr)
+        emit warn("Low cluster size, and no ToA calibration set - may be missing some coincidences.");
+
     ClusterData clusters = cluster(data);
     if(shouldCancel()) {
-        finish({}, {}, {});
+        finish();
         return;
     }
 
-    std::vector<ClusterEvent> centroids = centroid(data, clusters);
+    std::vector<ClusterCentroid> centroids = centroid(data, clusters);
+    if(shouldCancel()) {
+        finish();
+        return;
+    }
 
-    finish(std::move(data), std::move(clusters), std::move(centroids));
+    std::vector<CoincidencePair> coinc_pairs;
+    std::vector<CoincidenceNFold> coinc_nfolds;
+    std::tie(coinc_pairs, coinc_nfolds) = findCoincidences(clusters, centroids);
+    if(shouldCancel()) {
+        finish();
+        return;
+    }
+
+    finish(std::move(data), std::move(clusters), std::move(centroids), std::move(coinc_pairs), std::move(coinc_nfolds));
 
 }
 
-void LoadRawFileThread::finish(PixelData &&data, ClusterData &&clusters, std::vector<ClusterEvent> &&centroids) {
+void LoadRawFileThread::finish() {
+
+    finish({}, {}, {}, {}, {});
+
+}
+
+void LoadRawFileThread::finish(PixelData &&data, ClusterData &&clusters, std::vector<ClusterCentroid> &&centroids,
+                               std::vector<CoincidencePair> &&coinc_pairs, std::vector<CoincidenceNFold> &&coinc_nfolds) {
 
     // indicates an error with the loading function
     assert((data.addr.size() == data.tot.size()) && (data.addr.size() == data.toa.size()));
 
-    std::unique_ptr<Tpx3Image> image = std::make_unique<Tpx3Image>(mFileName, std::move(data), std::move(clusters), std::move(centroids));
+    emit setProgressText("Post-processing...");
+    emit setProgressIndefinite(true);
+
+    std::unique_ptr<Tpx3Image> image = std::make_unique<Tpx3Image>(mFileName, std::move(data), std::move(clusters),
+                                                                   std::move(centroids), std::move(coinc_pairs), std::move(coinc_nfolds));
 
     emit yieldPixelData(image.release());
 

@@ -5,17 +5,20 @@
 #include <filesystem>
 #include <cmath>
 
-#include <QImage>
-
 using namespace spec_hom;
 
-Tpx3Image::Tpx3Image(std::string fname, PixelData &&raw_data, ClusterData &&clusters, std::vector<ClusterEvent> &&centroids) :
+Tpx3Image::Tpx3Image(std::string fname, PixelData &&raw_data, ClusterData &&clusters,
+                     std::vector<ClusterCentroid> &&centroids, std::vector<CoincidencePair> &&coinc_pairs,
+                     std::vector<CoincidenceNFold> &&coinc_nfolds) :
         mFileName(std::move(fname)),
         mRawData(std::move(raw_data)),
         mClusters(std::move(clusters)),
-        mCentroids(std::move(centroids)) {
+        mCentroids(std::move(centroids)),
+        mCoincidencePairs(std::move(coinc_pairs)),
+        mCoincidenceNFold(std::move(coinc_nfolds)),
+        mBiphotonClicks() {
 
-    // Do nothing
+    initializeSpectrum();
 
 }
 
@@ -150,7 +153,7 @@ std::pair<QVector<double>, QVector<double>> Tpx3Image::startStopHistogram(double
 
 }
 
-std::tuple<QVector<double>, QVector<double>, QVector<double>> Tpx3Image::dToTDistribution(unsigned int hist_bin_size) const {
+std::tuple<QVector<double>, QVector<double>, QVector<double>> Tpx3Image::dToADistribution(unsigned int hist_bin_size) const {
 
     unsigned num_clusters = numClusters();
     unsigned num_packets = numRawPackets();
@@ -231,10 +234,87 @@ std::tuple<QVector<double>, QVector<double>, QVector<double>> Tpx3Image::dToTDis
         }
     }
 
-    for(auto ix = 0; ix < qt_x.size(); ++ix) {
-        std::cout << qt_x[ix] << "," << (qt_y[ix] / MIN_TICK) << std::endl;
+    return std::make_tuple<QVector<double>, QVector<double>, QVector<double>>(std::move(qt_x), std::move(qt_y), std::move(qt_yerr));
+
+}
+
+ImageXY<unsigned, Tpx3Image::SPATIAL_CORR_SIZE> Tpx3Image::spatialCorrelations() const {
+
+    ImageXY<unsigned, Tpx3Image::SPATIAL_CORR_SIZE> pixel_counts;
+    for(auto &row : pixel_counts)
+        for(auto &x : row)
+            x = 0;
+
+    for(auto &biphoton : mBiphotonClicks) {
+        auto px_x = static_cast<unsigned>(biphoton.wl_1 / PIXEL_SIZE * Tpx3Image::SPATIAL_CORR_SIZE / TPX3_SENSOR_SIZE);
+        auto px_y = static_cast<unsigned>(biphoton.wl_2 / PIXEL_SIZE * Tpx3Image::SPATIAL_CORR_SIZE / TPX3_SENSOR_SIZE);
+
+        if(biphoton.channel_1 != biphoton.channel_2)
+            ++pixel_counts[px_x][px_y];
     }
 
-    return std::make_tuple<QVector<double>, QVector<double>, QVector<double>>(std::move(qt_x), std::move(qt_y), std::move(qt_yerr));
+    return pixel_counts;
+
+}
+
+void Tpx3Image::initializeSpectrum() {
+
+    // Look for peaks along horizontal and vertical direction, and pick direction accordingly
+    std::vector<unsigned> h_slice, v_slice;
+    h_slice.reserve(Tpx3Image::HEIGHT);
+    v_slice.reserve(Tpx3Image::WIDTH);
+
+    auto raw_image = rawPacketImage();
+
+    for (unsigned r = 0; r < Tpx3Image::HEIGHT; ++r) {
+        unsigned slice_tot = 0;
+        for (unsigned c = 0; c < Tpx3Image::WIDTH; ++c) {
+            slice_tot += raw_image[r][c];
+        }
+        v_slice.push_back(slice_tot);
+    }
+    for (unsigned c = 0; c < Tpx3Image::WIDTH; ++c) {
+        unsigned slice_tot = 0;
+        for (unsigned r = 0; r < Tpx3Image::HEIGHT; ++r) {
+            slice_tot += raw_image[r][c];
+        }
+        h_slice.push_back(slice_tot);
+    }
+
+    auto h_slice_max = *std::max_element(h_slice.cbegin(), h_slice.cend());
+    auto v_slice_max = *std::max_element(v_slice.cbegin(), v_slice.cend());
+
+    bool h_lines = (h_slice_max >= v_slice_max);
+
+    // fit the lines
+    LinePair lines = LinePair::find(raw_image, h_lines);
+
+    mBiphotonClicks.clear();
+    mBiphotonClicks.reserve(mCoincidencePairs.size());
+
+    for(auto &coinc : mCoincidencePairs) {
+        auto centroid1 = mCentroids[coinc.id_1];
+        auto centroid2 = mCentroids[coinc.id_2];
+
+        int channel1 = lines.closestLine(centroid1.x, centroid1.y);
+        int channel2 = lines.closestLine(centroid2.x, centroid2.y);
+
+        // TODO: wavelength correction
+        double pix1, pix2;
+        if(h_lines) {
+            pix1 = centroid1.x;
+            pix2 = centroid2.x;
+        } else {
+            pix1 = centroid1.y;
+            pix2 = centroid2.y;
+        }
+
+        mBiphotonClicks.push_back({
+            pix1,
+            pix2,
+            channel1,
+            channel2
+        });
+    }
 
 }

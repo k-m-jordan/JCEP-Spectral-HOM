@@ -10,6 +10,7 @@ enum ViewType {
     VIEWTYPE_CLUSTERED_IMAGE,
     VIEWTYPE_START_STOP_HISTOGRAM,
     VIEWTYPE_DTOA_DISTRIBUTION,
+    VIEWTYPE_SPATIAL_CORRELATIONS,
     VIEWTYPE_NUM
 };
 
@@ -43,6 +44,7 @@ FileViewer::FileViewer(QWidget *parent, Tpx3Image *image) :
     mViewSelection->addItem("Clustered Image");
     mViewSelection->addItem("Start-Stop Histogram");
     mViewSelection->addItem("Relative Time of Arrival Distribution");
+    mViewSelection->addItem("Spatial Correlations");
 
     mViewSelection->setCurrentIndex(VIEWTYPE_RAW_IMAGE);
 
@@ -81,6 +83,9 @@ void FileViewer::viewTypeChanged(int newIndex) {
             break;
         case VIEWTYPE_DTOA_DISTRIBUTION:
             viewContainerLayout->addWidget(new DToADistributionView(mViewContainer, mImage));
+            break;
+        case VIEWTYPE_SPATIAL_CORRELATIONS:
+            viewContainerLayout->addWidget(new SpatialCorrelationView(mViewContainer, mImage));
             break;
         default:
             assert(0); // one of the menu items is not implemented!

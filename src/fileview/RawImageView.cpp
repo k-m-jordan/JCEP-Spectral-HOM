@@ -9,45 +9,23 @@
 using namespace spec_hom;
 
 RawImageView::RawImageView(QWidget *parent, Tpx3Image *src) :
-    QWidget(parent),
-    mLayout(new QVBoxLayout(this)),
-    mPlot(new QCustomPlot(this)) {
+    Hist2DView(parent, src) {
 
-    setLayout(mLayout);
+    title("Distribution of Raw Counts");
+    xLabel("Camera X");
+    yLabel("Camera Y");
+    colorbarLabel("Raw Counts per Pixel");
 
-    mPlot->axisRect()->setupFullAxesBox(true);
-    mPlot->xAxis->setLabel("Camera X");
-    mPlot->yAxis->setLabel("Camera Y");
-
-    auto width = Tpx3Image::WIDTH, height = Tpx3Image::HEIGHT;
-
-    auto *colorMap = new QCPColorMap(mPlot->xAxis, mPlot->yAxis);
-    colorMap->data()->setSize(width, height);
-    colorMap->data()->setRange({0, static_cast<double>(width)-1},
-                               {0, static_cast<double>(height)-1});
-
-    auto image_2d = src->rawPacketImage();
+    auto image_2d = source()->rawPacketImage();
+    auto &data_arr = data();
 
     for (int x=0; x<Tpx3Image::WIDTH; ++x) {
+        data_arr.emplace_back(Tpx3Image::HEIGHT);
         for (int y=0; y<Tpx3Image::HEIGHT; ++y) {
-            colorMap->data()->setCell(x, y, image_2d[x][y]);
+            data_arr[x][y] = image_2d[x][y];
         }
     }
 
-    auto *colorScale = new QCPColorScale(mPlot);
-    mPlot->plotLayout()->addElement(0, 1, colorScale);
-    colorScale->setType(QCPAxis::atRight);
-    colorMap->setColorScale(colorScale);
-    colorScale->axis()->setLabel("Raw Counts per Pixel");
-
-    colorMap->setGradient(QCPColorGradient::gpThermal);
-    colorMap->rescaleDataRange();
-    auto *marginGroup = new QCPMarginGroup(mPlot);
-    mPlot->axisRect()->setMarginGroup(QCP::msBottom|QCP::msTop, marginGroup);
-    colorScale->setMarginGroup(QCP::msBottom|QCP::msTop, marginGroup);
-    colorMap->setAntialiased(true);
-    mPlot->rescaleAxes();
-
-    mLayout->addWidget(mPlot);
+    updatePlot();
 
 }

@@ -66,6 +66,13 @@ FileInputSettingsPanel::FileInputSettingsPanel(QWidget *parent, AppActions &acti
         mMinClusterSizeLabel(new QLabel(mMinClusterSizeWidget)),
         mMinClusterSizeEdit(new QSpinBox(mMinClusterSizeWidget)),
 
+        mCoincidenceSettingsWidget(new QGroupBox(this)),
+        mCoincidenceSettingsLayout(new QVBoxLayout(mCoincidenceSettingsWidget)),
+        mCoincidenceWindowWidget(new QWidget(mCoincidenceSettingsWidget)),
+        mCoincidenceWindowLayout(new QHBoxLayout(mCoincidenceWindowWidget)),
+        mCoincidenceWindowLabel(new QLabel(mCoincidenceWindowWidget)),
+        mCoincidenceWindowEdit(new QLineEdit(mCoincidenceWindowWidget)),
+
         mBottomText(new QLabel(this)){
 
     for(auto &x : mCurrCalibration) // default is to do nothing
@@ -135,10 +142,10 @@ FileInputSettingsPanel::FileInputSettingsPanel(QWidget *parent, AppActions &acti
 
                 mClusterWindowXYLabel->setText("XY Half Window [pixels]: ");
                 mClusterWindowXYEdit->setValidator(new QDoubleValidator(0.1, 128, 1, mClusterWindowXYEdit));
-                mClusterWindowXYEdit->setText("2");
+                mClusterWindowXYEdit->setText("5");
                 mClusterWindowTLabel->setText("T Half Window [ns]: ");
                 mClusterWindowTEdit->setValidator(new QDoubleValidator(1.5625, 15625, 2, mClusterWindowTEdit));
-                mClusterWindowTEdit->setText("250");
+                mClusterWindowTEdit->setText("750");
 
             mClusterWindowLayout->addWidget(mClusterWindowXYLabel);
             mClusterWindowLayout->addWidget(mClusterWindowXYEdit);
@@ -161,9 +168,26 @@ FileInputSettingsPanel::FileInputSettingsPanel(QWidget *parent, AppActions &acti
         mBottomText->setText("Settings apply only to newly-imported files.");
         mBottomText->setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Maximum);
 
+        mCoincidenceSettingsWidget->setTitle("Coincidences");
+        mCoincidenceSettingsWidget->setStyleSheet("QGroupBox { font-weight: bold; }");
+        mCoincidenceSettingsWidget->setLayout(mCoincidenceSettingsLayout);
+        mCoincidenceSettingsWidget->setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Maximum);
+
+            mCoincidenceWindowWidget->setLayout(mCoincidenceWindowLayout);
+
+                mCoincidenceWindowLabel->setText("Coincidence Window [ns]: ");
+                mCoincidenceWindowEdit->setValidator(new QDoubleValidator(0.1, 10000, 1, mCoincidenceWindowEdit));
+                mCoincidenceWindowEdit->setText("15");
+
+            mCoincidenceWindowLayout->addWidget(mCoincidenceWindowLabel);
+            mCoincidenceWindowLayout->addWidget(mCoincidenceWindowEdit);
+
+        mCoincidenceSettingsLayout->addWidget(mCoincidenceWindowWidget);
+
     mLayout->addWidget(mGeneralSettingsWidget);
     mLayout->addWidget(mToTCorrectionSettingsWidget);
     mLayout->addWidget(mClusteringSettingsWidget);
+    mLayout->addWidget(mCoincidenceSettingsWidget);
     mLayout->addWidget(new QWidget());
     mLayout->addWidget(mBottomText);
 
@@ -194,6 +218,8 @@ Tpx3ImportSettings FileInputSettingsPanel::getSettings() {
     float clusterWindowT = std::stof(mClusterWindowTEdit->text().toStdString());
     int minClusterSize = mMinClusterSizeEdit->value();
 
+    double coincidenceWindow = std::stod(mCoincidenceWindowEdit->text().toStdString());
+
     return {
         maxNumThreads,
         mask,
@@ -202,7 +228,9 @@ Tpx3ImportSettings FileInputSettingsPanel::getSettings() {
 
         clusterWindowXY,
         clusterWindowT,
-        minClusterSize
+        minClusterSize,
+
+        coincidenceWindow*1e-9
     };
 
 }
@@ -306,7 +334,7 @@ void FileInputSettingsPanel::clearToACalibClick() {
     // reset calibration
     for(auto &x : mCurrCalibration)
         x = 0;
-    mToTCorrCurrLabel->setText("<b>(No mask set)</b>");
+    mToTCorrCurrLabel->setText("<b>(No calibration set)</b>");
 
 }
 

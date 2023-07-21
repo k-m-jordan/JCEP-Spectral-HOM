@@ -1,5 +1,4 @@
 #include <QApplication>
-#include <QPushButton>
 #include "ui/ui.h"
 
 using namespace spec_hom;

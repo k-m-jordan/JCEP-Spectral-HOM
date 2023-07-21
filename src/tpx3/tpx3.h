@@ -39,6 +39,8 @@ namespace spec_hom {
         float clusterSizeXY;
         float clusterSizeT;
         int minClusterSize;
+
+        double coincidenceWindow;
     };
 
     struct PixelAddr {
@@ -61,13 +63,29 @@ namespace spec_hom {
         std::vector<int> cluster_ids;
     };
 
-    struct ClusterEvent {
+    struct ClusterCentroid {
         double x, y; // physical position [m]
         double toa; // physical time of arrival [s]
     };
 
+    struct CoincidencePair {
+        unsigned id_1, id_2; // cluster ids for the two coincident events
+    };
+
+    struct CoincidenceNFold {
+        std::vector<unsigned> ids; // cluster ids for the n coincident events
+    };
+
+    struct SpectrumPair {
+        double wl_1, wl_2; // wavelengths [m] of two photons
+        int channel_1, channel_2; // which beam (top=1, bottom=2) the photon was in
+    };
+
+    template<typename T, int size>
+    using ImageXY = std::array<std::array<T, size>, size>;
+
     template<typename T>
-    using Tpx3ImageXY = std::array<std::array<T, TPX3_SENSOR_SIZE>, TPX3_SENSOR_SIZE>;
+    using Tpx3ImageXY = ImageXY<T, TPX3_SENSOR_SIZE>;
 
     class LinePair {
     public:
@@ -77,6 +95,7 @@ namespace spec_hom {
         static LinePair find(Tpx3ImageXY<unsigned> &image, bool h_lines, QVector<double> *x = nullptr, QVector<double> *y = nullptr, QVector<double> *fit_y = nullptr);
 
         void getRectBounds(double &min1, double &max1, double &min2, double &max2, double num_sigma);
+        int closestLine(double x, double y); // returns 1 if left line is nearest, 2 if right line is nearest (does not use sigma)
 
     private:
         bool mIsVertical; // whether the lines are vertical (true) or horizontal (false)
@@ -88,7 +107,8 @@ namespace spec_hom {
     public:
         static constexpr unsigned WIDTH = TPX3_SENSOR_SIZE, HEIGHT = TPX3_SENSOR_SIZE;
 
-        Tpx3Image(std::string fname, PixelData &&raw_data, ClusterData &&clusters, std::vector<ClusterEvent> &&centroids);
+        Tpx3Image(std::string fname, PixelData &&raw_data, ClusterData &&clusters, std::vector<ClusterCentroid> &&centroids,
+                  std::vector<CoincidencePair> &&coinc_pairs, std::vector<CoincidenceNFold> &&coinc_nfolds);
         Tpx3Image(const Tpx3Image &rhs) = delete; // this object is large; better to avoid unnecessary copies
         ~Tpx3Image() = default;
 
@@ -104,13 +124,21 @@ namespace spec_hom {
         [[nodiscard]] std::pair<QVector<double>, QVector<double>> toTDistribution(unsigned hist_bin_size = 1) const;
         [[nodiscard]] Tpx3ImageXY<unsigned> clusterImage() const;
         [[nodiscard]] std::pair<QVector<double>, QVector<double>> startStopHistogram(double hist_bin_size = MIN_TICK, unsigned num_bins = 128) const; // hist_size in seconds
-        [[nodiscard]] std::tuple<QVector<double>, QVector<double>, QVector<double>> dToTDistribution(unsigned hist_bin_size = 1) const;
+        [[nodiscard]] std::tuple<QVector<double>, QVector<double>, QVector<double>> dToADistribution(unsigned hist_bin_size = 1) const;
+
+        static constexpr int SPATIAL_CORR_SIZE = 3*TPX3_SENSOR_SIZE;
+        [[nodiscard]] ImageXY<unsigned, SPATIAL_CORR_SIZE> spatialCorrelations() const;
 
     private:
+        void initializeSpectrum();
+
         std::string mFileName;
         PixelData mRawData;
         ClusterData mClusters;
-        std::vector<ClusterEvent> mCentroids;
+        std::vector<ClusterCentroid> mCentroids;
+        std::vector<CoincidencePair> mCoincidencePairs;
+        std::vector<CoincidenceNFold> mCoincidenceNFold;
+        std::vector<SpectrumPair> mBiphotonClicks;
     };
 
     // Loads a given file into a vector of PixelData's
@@ -126,11 +154,14 @@ namespace spec_hom {
         void yieldPixelData(spec_hom::Tpx3Image *data);
 
     private:
-        void finish(PixelData &&data, ClusterData &&clusters, std::vector<ClusterEvent> &&centroids);
+        void finish(PixelData &&data, ClusterData &&clusters, std::vector<ClusterCentroid> &&centroids,
+                    std::vector<CoincidencePair> &&coinc_pairs, std::vector<CoincidenceNFold> &&coinc_nfolds);
+        void finish(); // calls previous function, but with all arguments initialized from empty list
 
         PixelData parseRawData();
         ClusterData cluster(const PixelData &data);
-        std::vector<ClusterEvent> centroid(const PixelData &data, const ClusterData &clusters);
+        std::vector<ClusterCentroid> centroid(const PixelData &data, const ClusterData &clusters);
+        std::pair<std::vector<CoincidencePair>, std::vector<CoincidenceNFold>> findCoincidences(const ClusterData &clusters, const std::vector<ClusterCentroid> &centroids);
 
         std::string mFileName;
         Tpx3ImportSettings mImportSettings;

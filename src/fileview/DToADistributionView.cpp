@@ -9,42 +9,25 @@
 using namespace spec_hom;
 
 DToADistributionView::DToADistributionView(QWidget *parent, Tpx3Image *image) :
-        QWidget(parent),
-        mXData(),
-        mYData(),
-        mLayout(new QVBoxLayout(this)),
-        mPlot(new QCustomPlot(this)),
+        LinePlotView(parent, image),
         mExportCalibButton(new QPushButton(this)) {
 
-    setLayout(mLayout);
+    auto &x_data = xData(), &y_data = yData(), &y_err = yErr();
 
-    QVector<double> y_err;
-    std::tie(mXData, mYData, y_err) = image->dToTDistribution();
+    std::tie(x_data, y_data, y_err) = source()->dToADistribution(4);
 
-    auto max_y = *std::max_element(mYData.cbegin(), mYData.cend());
-    auto min_y = *std::min_element(mYData.cbegin(), mYData.cend());
+    title("Mean Delay vs. Time over Threshold");
+    xLabel("Time over Threshold [ns]");
+    yLabel("Delay in Time of Arrival [ns]");
 
-    mPlot->addGraph()->setData(mXData, mYData);
+    updatePlot();
 
-    mPlot->xAxis->setRange(mXData.front(), mXData.back());
-    mPlot->yAxis->setRange(min_y, max_y);
-
-    mPlot->xAxis->setLabel("Time over Threshold [ns]");
-    mPlot->yAxis->setLabel("Delay in Time of Arrival");
-
-    auto error_bars = new QCPErrorBars(mPlot->xAxis, mPlot->yAxis);
-    error_bars->setAntialiased(false);
-    error_bars->setDataPlottable(mPlot->graph(0));
-    error_bars->setPen(QPen(QColor(180, 180, 180)));
-    error_bars->setData(y_err);
-
-    mPlot->replot();
-
-    mExportCalibButton->setText("Export Data as ToT Calibration");
+    mExportCalibButton->setText("Export Data as ToA Calibration");
+    mExportCalibButton->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
+    mExportCalibButton->setIcon(this->style()->standardIcon(QStyle::SP_ArrowForward));
     connect(mExportCalibButton, &QPushButton::clicked, this, &DToADistributionView::exportCalibrationClicked);
 
-    mLayout->addWidget(mPlot);
-    mLayout->addWidget(mExportCalibButton);
+    toolbarLayout()->addWidget(mExportCalibButton);
 
 }
 
@@ -60,9 +43,14 @@ void DToADistributionView::exportCalibrationClicked() {
     if(filename.isEmpty())
         return;
 
+    if(!filename.toLower().endsWith(".txt"))
+        filename += ".txt";
+
+    auto &x_data = xData(), &y_data = yData();
+
     std::ofstream output(filename.toStdString());
-    for(auto ix = 0; ix < mXData.size(); ++ix) {
-        output << (mXData[ix] / TOT_UNIT_SIZE) << "," << mYData[ix] << std::endl;
+    for(auto ix = 0; ix < x_data.size(); ++ix) {
+        output << (x_data[ix] / TOT_UNIT_SIZE) << "," << y_data[ix] << std::endl;
     }
 
     output.close();

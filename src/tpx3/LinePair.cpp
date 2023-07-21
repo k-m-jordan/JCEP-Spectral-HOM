@@ -179,3 +179,25 @@ void LinePair::getRectBounds(double &min1, double &max1, double &min2, double &m
     max2 = std::max(m1 + num_sigma * s1, m2 + num_sigma * s2);
 
 }
+
+int LinePair::closestLine(double x, double y) {
+
+    if(mIsVertical) {
+        double bottom = std::min(mLine1Pos, mLine2Pos);
+        double top = std::max(mLine1Pos, mLine2Pos);
+        double mid = (bottom + top) / 2.0;
+        if (y <= mid)
+            return 1;
+        else
+            return 2;
+    } else {
+        double left = std::min(mLine1Pos, mLine2Pos);
+        double right = std::max(mLine1Pos, mLine2Pos);
+        double mid = (left + right) / 2.0;
+        if (x <= mid)
+            return 1;
+        else
+            return 2;
+    }
+
+}

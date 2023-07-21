@@ -39,6 +39,7 @@ find_package(Qt6 COMPONENTS
         Core
         Gui
         Widgets
+        Network
         REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(PCL 1.3 REQUIRED)
@@ -66,11 +67,17 @@ add_executable(Spectral_HOM
         src/ui/SetImageMaskDialog.cpp
         src/fileview/ClusteredImageView.cpp
         src/tpx3/LinePair.cpp
-        src/fileview/StartStopHistogramView.cpp src/fileview/DToADistributionView.cpp)
+        src/fileview/StartStopHistogramView.cpp
+        src/fileview/DToADistributionView.cpp
+        src/fileview/SpatialCorrelationView.cpp
+        src/fileview/FileViewPanel.cpp
+        src/fileview/LinePlotView.cpp
+        src/fileview/Hist2DView.cpp)
 target_link_libraries(Spectral_HOM
         Qt::Core
         Qt::Gui
         Qt::Widgets
+        Qt::Network
         qcustomplot
         pcl_common
         pcl_octree
@@ -84,6 +91,8 @@ target_include_directories(Spectral_HOM SYSTEM PUBLIC
         ${PCL_INCLUDE_DIRS}
         ${DLIB_INSTALL}
     )
+target_precompile_headers(Spectral_HOM PUBLIC
+        ${QCUSTOMPLOT_INSTALL}/qcustomplot.h)
 link_directories(Spectral_HOM PUBLIC
         ${PCL_LIBRARY_DIRS}
     )
