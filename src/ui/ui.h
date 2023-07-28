@@ -112,7 +112,7 @@ namespace spec_hom {
         //void getRectBounds(int &min1, int &max1, int &min2, int &max2, double num_sigma);
 
         std::unique_ptr<Tpx3Image> mRefImage;
-        Tpx3ImageXY<unsigned> mRawImage;
+        ImageXY<unsigned> mRawImage;
         LinePair mLastFit;
 
         QHBoxLayout *mLayout;

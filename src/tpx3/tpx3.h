@@ -81,18 +81,15 @@ namespace spec_hom {
         int channel_1, channel_2; // which beam (top=1, bottom=2) the photon was in
     };
 
-    template<typename T, int size>
-    using ImageXY = std::array<std::array<T, size>, size>;
-
     template<typename T>
-    using Tpx3ImageXY = ImageXY<T, TPX3_SENSOR_SIZE>;
+    using ImageXY = std::vector<std::vector<T>>;
 
     class LinePair {
     public:
         LinePair(bool vertical, double line_1_pos, double line_2_pos, double line_1_sigma, double line_2_sigma);
 
         // If these pointers are supplied, this function will return the fit data used
-        static LinePair find(Tpx3ImageXY<unsigned> &image, bool h_lines, QVector<double> *x = nullptr, QVector<double> *y = nullptr, QVector<double> *fit_y = nullptr);
+        static LinePair find(ImageXY<unsigned> &image, bool h_lines, QVector<double> *x = nullptr, QVector<double> *y = nullptr, QVector<double> *fit_y = nullptr);
 
         void getRectBounds(double &min1, double &max1, double &min2, double &max2, double num_sigma);
         int closestLine(double x, double y); // returns 1 if left line is nearest, 2 if right line is nearest (does not use sigma)
@@ -120,14 +117,14 @@ namespace spec_hom {
         [[nodiscard]] unsigned long numClusters() const;
         [[nodiscard]] bool empty() const;
 
-        [[nodiscard]] Tpx3ImageXY<unsigned> rawPacketImage() const;
+        [[nodiscard]] ImageXY<unsigned> rawPacketImage() const;
         [[nodiscard]] std::pair<QVector<double>, QVector<double>> toTDistribution(unsigned hist_bin_size = 1) const;
-        [[nodiscard]] Tpx3ImageXY<unsigned> clusterImage() const;
+        [[nodiscard]] ImageXY<unsigned> clusterImage() const;
         [[nodiscard]] std::pair<QVector<double>, QVector<double>> startStopHistogram(double hist_bin_size = MIN_TICK, unsigned num_bins = 128) const; // hist_size in seconds
         [[nodiscard]] std::tuple<QVector<double>, QVector<double>, QVector<double>> dToADistribution(unsigned hist_bin_size = 1) const;
 
         static constexpr int SPATIAL_CORR_SIZE = 3*TPX3_SENSOR_SIZE;
-        [[nodiscard]] ImageXY<unsigned, SPATIAL_CORR_SIZE> spatialCorrelations() const;
+        [[nodiscard]] ImageXY<unsigned> spatialCorrelations() const;
 
     private:
         void initializeSpectrum();

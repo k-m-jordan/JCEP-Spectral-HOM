@@ -65,12 +65,13 @@ bool Tpx3Image::empty() const {
 
 }
 
-Tpx3ImageXY<unsigned> Tpx3Image::rawPacketImage() const {
+ImageXY<unsigned> Tpx3Image::rawPacketImage() const {
 
-    Tpx3ImageXY<unsigned> pixel_counts;
-    for(auto &row : pixel_counts)
-        for(auto &x : row)
-            x = 0;
+    std::vector<unsigned> r;
+    r.insert(r.begin(), TPX3_SENSOR_SIZE, 0);
+
+    ImageXY<unsigned> pixel_counts;
+    pixel_counts.insert(pixel_counts.begin(), TPX3_SENSOR_SIZE, r);
 
     for(auto &packet : mRawData.addr)
         ++pixel_counts[packet.x][packet.y];
@@ -107,12 +108,13 @@ std::pair<QVector<double>, QVector<double>> Tpx3Image::toTDistribution(unsigned 
 
 }
 
-Tpx3ImageXY<unsigned> Tpx3Image::clusterImage() const {
+ImageXY<unsigned> Tpx3Image::clusterImage() const {
 
-    Tpx3ImageXY<unsigned> pixel_counts;
-    for(auto &row : pixel_counts)
-        for(auto &x : row)
-            x = 0;
+    std::vector<unsigned> r;
+    r.insert(r.begin(), TPX3_SENSOR_SIZE, 0);
+
+    ImageXY<unsigned> pixel_counts;
+    pixel_counts.insert(pixel_counts.begin(), TPX3_SENSOR_SIZE, r);
 
     for(auto &cluster : mCentroids) {
         auto px_x = static_cast<unsigned>(cluster.x / PIXEL_SIZE);
@@ -238,12 +240,13 @@ std::tuple<QVector<double>, QVector<double>, QVector<double>> Tpx3Image::dToADis
 
 }
 
-ImageXY<unsigned, Tpx3Image::SPATIAL_CORR_SIZE> Tpx3Image::spatialCorrelations() const {
+ImageXY<unsigned> Tpx3Image::spatialCorrelations() const {
 
-    ImageXY<unsigned, Tpx3Image::SPATIAL_CORR_SIZE> pixel_counts;
-    for(auto &row : pixel_counts)
-        for(auto &x : row)
-            x = 0;
+    std::vector<unsigned> r;
+    r.insert(r.begin(), Tpx3Image::SPATIAL_CORR_SIZE, 0);
+
+    ImageXY<unsigned> pixel_counts;
+    pixel_counts.insert(pixel_counts.begin(), Tpx3Image::SPATIAL_CORR_SIZE, r);
 
     for(auto &biphoton : mBiphotonClicks) {
         auto px_x = static_cast<unsigned>(biphoton.wl_1 / PIXEL_SIZE * Tpx3Image::SPATIAL_CORR_SIZE / TPX3_SENSOR_SIZE);

@@ -12,9 +12,15 @@ endif()
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
     set(CMAKE_CXX_FLAGS "-O3")
 elseif(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
-    set(CMAKE_CXX_FLAGS "/EHsc")
+    set(CMAKE_CXX_FLAGS_DEBUG "/EHsc /O2")
+    set(CMAKE_CXX_FLAGS_RELEASE "/EHsc /O2")
+    set(Boost_NO_WARN_NEW_VERSIONS 1)
 else()
     message(FATAL_ERROR "Only GCC and MSVC compilers configured; CMakeLists.txt must be modified with appropriate compiler flags")
+endif()
+
+if(WIN32)
+    set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 endif()
 
 set(EIGEN_INSTALL ./lib/eigen-3.4.0)
@@ -79,29 +85,23 @@ target_link_libraries(Spectral_HOM
         Qt::Widgets
         Qt::Network
         qcustomplot
-        pcl_common
-        pcl_octree
         dlib::dlib
+        ${PCL_LIBRARIES}
     )
 target_include_directories(Spectral_HOM PUBLIC src/)
 target_include_directories(Spectral_HOM SYSTEM PUBLIC
         ${EIGEN_INSTALL}
         ${TIMSORT_INSTALL}/include
         ${QCUSTOMPLOT_INSTALL}
-        ${PCL_INCLUDE_DIRS}
         ${DLIB_INSTALL}
+        ${PCL_INCLUDE_DIRS}
     )
 target_precompile_headers(Spectral_HOM PUBLIC
         ${QCUSTOMPLOT_INSTALL}/qcustomplot.h)
-link_directories(Spectral_HOM PUBLIC
-        ${PCL_LIBRARY_DIRS}
-    )
-add_definitions(
-        ${PCL_DEFINITIONS}
-    )
 
-# Use this if you have a missing DLL error
-#add_custom_command(TARGET Spectral_HOM POST_BUILD
-#        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-#        "${PROJECT_BINARY_DIR}/lib/qcustomplot/qcustomplot.dll"
-#        $<TARGET_FILE_DIR:Spectral_HOM>)
+if(WIN32)
+    add_custom_command(TARGET Spectral_HOM POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${PROJECT_BINARY_DIR}/lib/qcustomplot/qcustomplot.dll"
+            $<TARGET_FILE_DIR:Spectral_HOM>)
+endif()

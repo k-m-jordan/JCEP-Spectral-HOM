@@ -94,7 +94,7 @@ param_vec fit_data(QVector<double> &x, QVector<double> &y, bool h_lines) {
 
 }
 
-LinePair LinePair::find(Tpx3ImageXY<unsigned int> &image, bool h_lines, QVector<double> *x_out, QVector<double> *y_out, QVector<double> *fit_y_out) {
+LinePair LinePair::find(ImageXY<unsigned int> &image, bool h_lines, QVector<double> *x_out, QVector<double> *y_out, QVector<double> *fit_y_out) {
 
     unsigned max_ix, max_jx;
     if (h_lines) {
