@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 3.22)
 
-set(CMAKE_BUILD_TYPE Debug)
-
 project(Spectral_HOM)
+
+set(CMAKE_BUILD_TYPE Release)
 
 if(NOT EXISTS ${QT6_INSTALL})
     message(FATAL_ERROR "No Qt 6 path provided. Rerun with the option '-DQT6_INSTALL=/path/to/qt6'")
@@ -12,8 +12,8 @@ endif()
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
     set(CMAKE_CXX_FLAGS "-O3")
 elseif(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
-    set(CMAKE_CXX_FLAGS_DEBUG "/EHsc /O2")
-    set(CMAKE_CXX_FLAGS_RELEASE "/EHsc /O2")
+    set(CMAKE_CXX_FLAGS_DEBUG "/EHsc /O2 /arch:AVX2 /fp:fast /GL")
+    set(CMAKE_CXX_FLAGS_RELEASE "/EHsc /O2 /arch:AVX2 /fp:fast /GL")
     set(Boost_NO_WARN_NEW_VERSIONS 1)
 else()
     message(FATAL_ERROR "Only GCC and MSVC compilers configured; CMakeLists.txt must be modified with appropriate compiler flags")
@@ -22,6 +22,8 @@ endif()
 if(WIN32)
     set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 endif()
+
+set(EIGEN_BUILD_DOC OFF)
 
 set(EIGEN_INSTALL ./lib/eigen-3.4.0)
 set(TIMSORT_INSTALL ./lib/timsort)
@@ -96,12 +98,3 @@ target_include_directories(Spectral_HOM SYSTEM PUBLIC
         ${DLIB_INSTALL}
         ${PCL_INCLUDE_DIRS}
     )
-target_precompile_headers(Spectral_HOM PUBLIC
-        ${QCUSTOMPLOT_INSTALL}/qcustomplot.h)
-
-if(WIN32)
-    add_custom_command(TARGET Spectral_HOM POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            "${PROJECT_BINARY_DIR}/lib/qcustomplot/qcustomplot.dll"
-            $<TARGET_FILE_DIR:Spectral_HOM>)
-endif()
