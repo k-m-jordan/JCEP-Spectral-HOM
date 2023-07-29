@@ -10,10 +10,12 @@ endif()
 
 # Compiler-specific configuration
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
-    set(CMAKE_CXX_FLAGS "-O3")
+    set(CMAKE_CXX_FLAGS "-O3 -march=native -Wno-deprecated-declarations -Wno-stringop-overflow")
 elseif(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
-    set(CMAKE_CXX_FLAGS_DEBUG "/EHsc /O2 /arch:AVX2 /fp:fast /GL")
-    set(CMAKE_CXX_FLAGS_RELEASE "/EHsc /O2 /arch:AVX2 /fp:fast /GL")
+    set(CMAKE_CXX_FLAGS "/EHsc /O2 /arch:AVX2 /fp:fast /GL")
+
+    set(CMAKE_CXX_FLAGS_DEBUG ${CMAKE_CXX_FLAGS})
+    set(CMAKE_CXX_FLAGS_RELEASE ${CMAKE_CXX_FLAGS})
     set(Boost_NO_WARN_NEW_VERSIONS 1)
 else()
     message(FATAL_ERROR "Only GCC and MSVC compilers configured; CMakeLists.txt must be modified with appropriate compiler flags")
@@ -23,8 +25,6 @@ if(WIN32)
     set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 endif()
 
-set(EIGEN_BUILD_DOC OFF)
-
 set(EIGEN_INSTALL ./lib/eigen-3.4.0)
 set(TIMSORT_INSTALL ./lib/timsort)
 set(QCUSTOMPLOT_INSTALL ./lib/qcustomplot)
@@ -33,6 +33,9 @@ list(APPEND CMAKE_PREFIX_PATH
         ${QT6_INSTALL}
         ${EIGEN_INSTALL}
     )
+
+set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
+set(EIGEN_BUILD_DOC OFF)
 
 add_subdirectory(${EIGEN_INSTALL})
 add_subdirectory(${QCUSTOMPLOT_INSTALL})
@@ -88,7 +91,8 @@ target_link_libraries(Spectral_HOM
         Qt::Network
         qcustomplot
         dlib::dlib
-        ${PCL_LIBRARIES}
+        pcl_common
+        pcl_octree
     )
 target_include_directories(Spectral_HOM PUBLIC src/)
 target_include_directories(Spectral_HOM SYSTEM PUBLIC
