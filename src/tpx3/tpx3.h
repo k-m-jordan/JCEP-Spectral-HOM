@@ -123,8 +123,10 @@ namespace spec_hom {
         [[nodiscard]] std::pair<QVector<double>, QVector<double>> startStopHistogram(double hist_bin_size = MIN_TICK, unsigned num_bins = 128) const; // hist_size in seconds
         [[nodiscard]] std::tuple<QVector<double>, QVector<double>, QVector<double>> dToADistribution(unsigned hist_bin_size = 1) const;
 
-        static constexpr int SPATIAL_CORR_SIZE = 3*TPX3_SENSOR_SIZE;
+        static constexpr int SPATIAL_CORR_SIZE = TPX3_SENSOR_SIZE;
         [[nodiscard]] ImageXY<unsigned> spatialCorrelations() const;
+
+        void saveTo(const std::string &path) const;
 
     private:
         void initializeSpectrum();

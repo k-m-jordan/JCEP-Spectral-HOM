@@ -46,6 +46,7 @@ namespace spec_hom {
         QAction *startImportFiles;
         QAction *stopImportFiles;
         QAction *clearFileList;
+        QAction *exportAllData;
         QAction *lockUiForImporting;
         QAction *doneImporting;
         QAction *deleteFile; // to use this action, set its data to a QString or QStringList with the filenames to delete
@@ -244,6 +245,7 @@ namespace spec_hom {
         QPushButton *mOpenFileBtn;
         QPushButton *mStartStopLoadBtn;
         QPushButton *mClearFilesBtn;
+        QPushButton *mExportFilesBtn;
 
         QTableWidget *mFileTable;
 
@@ -265,6 +267,7 @@ namespace spec_hom {
         void freezeUiForMasking();
         void unfreezeUi();
 
+        void exportAllData();
         void deleteFiles(); // note: this requires that the filename be stored in the corresponding QAction's data()
         void deleteAllFiles();
         void startImportFiles();

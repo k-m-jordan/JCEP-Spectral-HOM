@@ -321,3 +321,12 @@ void Tpx3Image::initializeSpectrum() {
     }
 
 }
+
+void Tpx3Image::saveTo(const std::string &path) const {
+
+    std::ofstream file(path);
+    file << "Channel 1, Channel 2, Wavelength 1, Wavelength 2\n";
+    for(auto &biphoton : mBiphotonClicks)
+        file << biphoton.channel_1 << ", " << biphoton.channel_2 << ", " << biphoton.wl_1 << ", " << biphoton.wl_2 << std::endl;
+
+}

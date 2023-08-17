@@ -13,13 +13,13 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
     set(CMAKE_CXX_FLAGS "-O3 -Wno-stringop-overflow -Wno-deprecated-declarations")
 elseif(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
     set(CMAKE_CXX_FLAGS "/EHsc /O2 /arch:AVX2 /fp:fast /GL")
-
-    set(CMAKE_CXX_FLAGS_DEBUG ${CMAKE_CXX_FLAGS})
-    set(CMAKE_CXX_FLAGS_RELEASE ${CMAKE_CXX_FLAGS})
     set(Boost_NO_WARN_NEW_VERSIONS 1)
 else()
     message(FATAL_ERROR "Only GCC and MSVC compilers configured; CMakeLists.txt must be modified with appropriate compiler flags")
 endif()
+
+set(CMAKE_CXX_FLAGS_DEBUG ${CMAKE_CXX_FLAGS})
+set(CMAKE_CXX_FLAGS_RELEASE ${CMAKE_CXX_FLAGS})
 
 if(WIN32)
     set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)

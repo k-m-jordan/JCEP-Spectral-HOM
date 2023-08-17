@@ -30,6 +30,7 @@ FileInputPanel::FileInputPanel(QWidget *parent, LogPanel &logger, AppActions &ac
         mOpenFileBtn(new QPushButton(this)),
         mStartStopLoadBtn(new QPushButton(this)),
         mClearFilesBtn(new QPushButton(this)),
+        mExportFilesBtn(new QPushButton(this)),
         mFileTable(new QTableWidget(this)),
         mBottomText(new QLabel(this)),
         mCancelBtnOnly(false),
@@ -57,6 +58,12 @@ FileInputPanel::FileInputPanel(QWidget *parent, LogPanel &logger, AppActions &ac
     mClearFilesBtn->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
     connect(mClearFilesBtn, &QPushButton::clicked, actions.clearFileList, &QAction::trigger);
 
+    // Button to export data
+    mExportFilesBtn->setText("Export Data");
+    mExportFilesBtn->setIcon(this->style()->standardIcon(QStyle::SP_DialogSaveButton));
+    mExportFilesBtn->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
+    connect(mExportFilesBtn, &QPushButton::clicked, actions.exportAllData, &QAction::trigger);
+
     // Table displaying open files
     mFileTable->setColumnCount(COL_NUM);
     mFileTable->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
@@ -73,6 +80,7 @@ FileInputPanel::FileInputPanel(QWidget *parent, LogPanel &logger, AppActions &ac
     mToolbarLayout->addWidget(mOpenFileBtn);
     mToolbarLayout->addWidget(mStartStopLoadBtn);
     mToolbarLayout->addWidget(mClearFilesBtn);
+    mToolbarLayout->addWidget(mExportFilesBtn);
 
     // Setup bottom descriptive text
     mBottomText->setText("Double click a file to view data.");
@@ -212,6 +220,7 @@ void FileInputPanel::setCancelBtnOnly(bool value) {
 
     mOpenFileBtn->setEnabled(!value);
     mClearFilesBtn->setEnabled(!value);
+    mExportFilesBtn->setEnabled(!value);
 
     unsigned num_rows = mFileTable->rowCount();
     for(int r = 0; r < num_rows; ++r) {

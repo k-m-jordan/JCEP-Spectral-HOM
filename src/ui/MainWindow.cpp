@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <iostream>
+#include <filesystem>
 
 #include <QFileDialog>
 #include <QProgressDialog>
@@ -50,7 +51,7 @@ MainWindow::MainWindow() :
     mTabContainer->tabBar()->setTabButton(TAB_FILE_SETTINGS, QTabBar::RightSide, nullptr);
     mTabContainer->tabBar()->setTabIcon(TAB_FILE_SETTINGS, this->style()->standardIcon(QStyle::SP_FileDialogDetailedView));
 
-    mTabContainer->insertTab(TAB_FILE_IMPORT,mFilePanel, "Import Files");
+    mTabContainer->insertTab(TAB_FILE_IMPORT,mFilePanel, "Import/Export Files");
     mTabContainer->tabBar()->setTabButton(TAB_FILE_IMPORT, QTabBar::RightSide, nullptr);
     mTabContainer->tabBar()->setTabIcon(TAB_FILE_IMPORT, this->style()->standardIcon(QStyle::SP_DialogOkButton));
 
@@ -62,6 +63,7 @@ MainWindow::MainWindow() :
     connect(mActions.startImportFiles, &QAction::triggered, this, &MainWindow::startImportFiles);
     connect(mActions.stopImportFiles, &QAction::triggered, this, &MainWindow::stopImportFiles);
     connect(mActions.clearFileList, &QAction::triggered, this, &MainWindow::deleteAllFiles);
+    connect(mActions.exportAllData, &QAction::triggered, this, &MainWindow::exportAllData);
     connect(mActions.lockUiForImporting, &QAction::triggered, this, &MainWindow::freezeUiForImporting);
     connect(mActions.doneImporting, &QAction::triggered, this, &MainWindow::doneImportFiles);
     connect(mActions.deleteFile, &QAction::triggered, this, &MainWindow::deleteFiles);
@@ -129,6 +131,33 @@ void MainWindow::unfreezeUi() {
 
     for(auto ix = 0; ix < mTabContainer->count(); ++ix)
         mTabContainer->setTabEnabled(ix, true);
+
+}
+
+void MainWindow::exportAllData() {
+
+    auto folder = QFileDialog::getExistingDirectory(
+            this,
+            "Select Export Folder",
+            "."
+    );
+
+    if(folder.isEmpty())
+        return;
+
+    mLogPanel->log("Exporting to " + folder.toStdString() + "...");
+
+    for(auto &pair : mOpenImages) {
+        auto &filepath = pair.first;
+        auto &image = *pair.second;
+
+        std::filesystem::path p(filepath);
+        std::string output_path = folder.toStdString() + "/" + p.stem().string() + ".pairs.csv";
+        image.saveTo(output_path);
+        mLogPanel->log("Wrote file " + output_path);
+    }
+
+    mLogPanel->log("Done exporting");
 
 }
 
