@@ -152,9 +152,11 @@ void MainWindow::exportAllData() {
         auto &image = *pair.second;
 
         std::filesystem::path p(filepath);
-        std::string output_path = folder.toStdString() + "/" + p.stem().string() + ".pairs.csv";
-        image.saveTo(output_path);
-        mLogPanel->log("Wrote file " + output_path);
+        std::string file_prefix = folder.toStdString() + "/" + p.stem().string();
+        std::string coincs_path = file_prefix + ".pairs.csv";
+        std::string singles_path = file_prefix + ".singles.csv";
+        image.saveTo(coincs_path, singles_path);
+        mLogPanel->log("Wrote files to " + file_prefix + ".*.csv");
     }
 
     mLogPanel->log("Done exporting");

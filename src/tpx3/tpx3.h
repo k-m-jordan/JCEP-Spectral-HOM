@@ -126,7 +126,7 @@ namespace spec_hom {
         static constexpr int SPATIAL_CORR_SIZE = TPX3_SENSOR_SIZE;
         [[nodiscard]] ImageXY<unsigned> spatialCorrelations() const;
 
-        void saveTo(const std::string &path) const;
+        void saveTo(const std::string &coinc_path, const std::string &singles_path) const;
 
     private:
         void initializeSpectrum();
