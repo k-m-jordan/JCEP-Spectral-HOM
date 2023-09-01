@@ -327,11 +327,13 @@ void Tpx3Image::saveTo(const std::string &coinc_path, const std::string &singles
     std::ofstream coinc_file(coinc_path);
     coinc_file << "Channel 1, Channel 2, Wavelength 1, Wavelength 2\n";
     for(auto &biphoton : mBiphotonClicks)
-        coinc_file << biphoton.channel_1 << ", " << biphoton.channel_2 << ", " << biphoton.wl_1 << ", " << biphoton.wl_2 << std::endl;
+        coinc_file << biphoton.channel_1 << ", " << biphoton.channel_2 << ", " << biphoton.wl_1 << ", " << biphoton.wl_2 << "\n";
+    coinc_file << std::flush;
 
     std::ofstream singles_file(singles_path);
     singles_file << "X [m], Y [m]\n";
     for(auto &cluster : mCentroids)
-        singles_file << cluster.x << ", " << cluster.y << std::endl;
+        singles_file << cluster.x << ", " << cluster.y << "\n";
+    singles_file << std::flush;
 
 }
