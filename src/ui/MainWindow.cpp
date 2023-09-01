@@ -147,7 +147,15 @@ void MainWindow::exportAllData() {
 
     mLogPanel->log("Exporting to " + folder.toStdString() + "...");
 
+    QProgressDialog progbar("Exporting cluster data...", "Cancel", 0, mOpenImages.size(), this);
+    progbar.setWindowModality(Qt::WindowModal);
+    progbar.setWindowTitle("Exporting Data...");
+
+    int counter = 0;
+
     for(auto &pair : mOpenImages) {
+        progbar.setValue(counter++);
+
         auto &filepath = pair.first;
         auto &image = *pair.second;
 
@@ -157,6 +165,9 @@ void MainWindow::exportAllData() {
         std::string singles_path = file_prefix + ".singles.csv";
         image.saveTo(coincs_path, singles_path);
         mLogPanel->log("Wrote files to " + file_prefix + ".*.csv");
+
+        if(progbar.wasCanceled())
+            break;
     }
 
     mLogPanel->log("Done exporting");
