@@ -89,6 +89,10 @@ FileInputSettingsPanel::FileInputSettingsPanel(QWidget *parent, AppActions &acti
         mCalibrationIntercept2Edit(new QLineEdit(mCalibration2Widget)),
         mLoadCalibrationBtn(new QPushButton(mCalibrationSettingsWidget)),
 
+        mExportSettingsWidget(new QGroupBox(this)),
+        mExportSettingsLayout(new QVBoxLayout(mExportSettingsWidget)),
+        mExportSinglesCheck(new QCheckBox(mExportSettingsWidget)),
+
         mBottomText(new QLabel(this)){
 
     for(auto &x : mCurrCalibration) // default is to do nothing
@@ -242,11 +246,22 @@ FileInputSettingsPanel::FileInputSettingsPanel(QWidget *parent, AppActions &acti
         mCalibrationSettingsLayout->addWidget(mCalibration2Widget);
         mCalibrationSettingsLayout->addWidget(mLoadCalibrationBtn);
 
+    mExportSettingsWidget->setTitle("Export Settings");
+    mExportSettingsWidget->setStyleSheet("QGroupBox { font-weight: bold; }");
+    mExportSettingsWidget->setLayout(mExportSettingsLayout);
+    mExportSettingsWidget->setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Maximum);
+
+        mExportSinglesCheck->setText("Export Singles Data");
+        mExportSinglesCheck->setChecked(false);
+
+        mExportSettingsLayout->addWidget(mExportSinglesCheck);
+
     mLayout->addWidget(mGeneralSettingsWidget);
     mLayout->addWidget(mToTCorrectionSettingsWidget);
     mLayout->addWidget(mClusteringSettingsWidget);
     mLayout->addWidget(mCoincidenceSettingsWidget);
     mLayout->addWidget(mCalibrationSettingsWidget);
+    mLayout->addWidget(mExportSettingsWidget);
     mLayout->addWidget(new QWidget());
     mLayout->addWidget(mBottomText);
 
@@ -498,5 +513,11 @@ void FileInputSettingsPanel::loadCalibrationFileClick() {
     mCalibrationIntercept1Edit->setText(QString::number(intercept1));
     mCalibrationSlope2Edit->setText(QString::number(slope2));
     mCalibrationIntercept2Edit->setText(QString::number(intercept2));
+
+}
+
+bool FileInputSettingsPanel::shouldExportSingles() const {
+
+    return mExportSinglesCheck->isChecked();
 
 }

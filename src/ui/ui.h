@@ -21,6 +21,7 @@
 #include <QGroupBox>
 #include <QSpinBox>
 #include <QLineEdit>
+#include <QCheckBox>
 
 #include <dlib/optimization.h>
 
@@ -141,6 +142,7 @@ namespace spec_hom {
         FileInputSettingsPanel(QWidget *parent, AppActions &actions);
 
         Tpx3ImportSettings getSettings();
+        bool shouldExportSingles() const;
 
     private slots:
         void receiveImageMask(spec_hom::SpatialMask mask, std::string filename);
@@ -216,6 +218,10 @@ namespace spec_hom {
         QLabel *mCalibrationIntercept2Label;
         QLineEdit *mCalibrationIntercept2Edit;
         QPushButton *mLoadCalibrationBtn;
+
+        QGroupBox *mExportSettingsWidget;
+        QVBoxLayout *mExportSettingsLayout;
+        QCheckBox *mExportSinglesCheck;
 
         QLabel *mBottomText;
 

@@ -47,7 +47,7 @@ MainWindow::MainWindow() :
 
     mTabContainer->setTabsClosable(true);
 
-    mTabContainer->insertTab(TAB_FILE_SETTINGS, mFileSettingsPanel, "Import Settings");
+    mTabContainer->insertTab(TAB_FILE_SETTINGS, mFileSettingsPanel, "Import/Export Settings");
     mTabContainer->tabBar()->setTabButton(TAB_FILE_SETTINGS, QTabBar::RightSide, nullptr);
     mTabContainer->tabBar()->setTabIcon(TAB_FILE_SETTINGS, this->style()->standardIcon(QStyle::SP_FileDialogDetailedView));
 
@@ -163,7 +163,10 @@ void MainWindow::exportAllData() {
         std::string file_prefix = folder.toStdString() + "/" + p.stem().string();
         std::string coincs_path = file_prefix + ".pairs.csv";
         std::string singles_path = file_prefix + ".singles.csv";
-        image.saveTo(coincs_path, singles_path);
+        image.saveCoincsTo(coincs_path);
+        if(mFileSettingsPanel->shouldExportSingles())
+            image.saveSinglesTo(singles_path);
+
         mLogPanel->log("Wrote files to " + file_prefix + ".*.csv");
 
         if(progbar.wasCanceled())

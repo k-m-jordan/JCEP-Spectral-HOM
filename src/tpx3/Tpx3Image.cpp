@@ -338,7 +338,7 @@ void Tpx3Image::initializeSpectrum() {
 
 }
 
-void Tpx3Image::saveTo(const std::string &coinc_path, const std::string &singles_path) const {
+void Tpx3Image::saveCoincsTo(const std::string &coinc_path) const {
 
     double wl_min, wl_max;
     imageBounds(wl_min, wl_max);
@@ -349,6 +349,10 @@ void Tpx3Image::saveTo(const std::string &coinc_path, const std::string &singles
     for(auto &biphoton : mBiphotonClicks)
         coinc_file << biphoton.channel_1 << ", " << biphoton.channel_2 << ", " << biphoton.wl_1 << ", " << biphoton.wl_2 << "\n";
     coinc_file << std::flush;
+
+}
+
+void Tpx3Image::saveSinglesTo(const std::string &singles_path) const {
 
     std::ofstream singles_file(singles_path);
     singles_file << "X [m], Y [m]\n";
