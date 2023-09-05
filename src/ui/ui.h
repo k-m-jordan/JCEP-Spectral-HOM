@@ -107,11 +107,6 @@ namespace spec_hom {
         void updateSlicePlot();
         void acceptClicked();
 
-        //using param_vec = dlib::matrix<double, 6, 1>; // a1, m1, s1, a2, m2, s2; amplitude, mean, sigma for two gaussians
-        //param_vec fitData(QVector<double> &x, QVector<double> &y, bool h_lines);
-
-        //void getRectBounds(int &min1, int &max1, int &min2, int &max2, double num_sigma);
-
         std::unique_ptr<Tpx3Image> mRefImage;
         ImageXY<unsigned> mRawImage;
         LinePair mLastFit;
@@ -156,6 +151,7 @@ namespace spec_hom {
         void receiveImageMaskReference(Tpx3Image *image);
         void setToACalibClick();
         void clearToACalibClick();
+        void loadCalibrationFileClick();
 
         AppActions &mActions;
         std::unique_ptr<SpatialMask> mCurrImageMask;
@@ -204,6 +200,22 @@ namespace spec_hom {
         QHBoxLayout *mCoincidenceWindowLayout;
         QLabel *mCoincidenceWindowLabel;
         QLineEdit *mCoincidenceWindowEdit;
+
+        QGroupBox *mCalibrationSettingsWidget;
+        QVBoxLayout *mCalibrationSettingsLayout;
+        QWidget *mCalibration1Widget;
+        QHBoxLayout *mCalibration1Layout;
+        QLabel *mCalibrationSlope1Label;
+        QLineEdit *mCalibrationSlope1Edit;
+        QLabel *mCalibrationIntercept1Label;
+        QLineEdit *mCalibrationIntercept1Edit;
+        QWidget *mCalibration2Widget;
+        QHBoxLayout *mCalibration2Layout;
+        QLabel *mCalibrationSlope2Label;
+        QLineEdit *mCalibrationSlope2Edit;
+        QLabel *mCalibrationIntercept2Label;
+        QLineEdit *mCalibrationIntercept2Edit;
+        QPushButton *mLoadCalibrationBtn;
 
         QLabel *mBottomText;
 

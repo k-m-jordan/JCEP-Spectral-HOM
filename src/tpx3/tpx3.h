@@ -30,6 +30,11 @@ namespace spec_hom {
         int min1, max1, min2, max2; // min and max indices of the two lines
     };
 
+    struct WavelengthCalibration {
+        double slope1, intercept1;
+        double slope2, intercept2;
+    };
+
     struct Tpx3ImportSettings {
         int maxNumThreads;
         SpatialMask spatialMask;
@@ -41,6 +46,8 @@ namespace spec_hom {
         int minClusterSize;
 
         double coincidenceWindow;
+
+        WavelengthCalibration calibration;
     };
 
     struct PixelAddr {
@@ -105,7 +112,8 @@ namespace spec_hom {
         static constexpr unsigned WIDTH = TPX3_SENSOR_SIZE, HEIGHT = TPX3_SENSOR_SIZE;
 
         Tpx3Image(std::string fname, PixelData &&raw_data, ClusterData &&clusters, std::vector<ClusterCentroid> &&centroids,
-                  std::vector<CoincidencePair> &&coinc_pairs, std::vector<CoincidenceNFold> &&coinc_nfolds);
+                  std::vector<CoincidencePair> &&coinc_pairs, std::vector<CoincidenceNFold> &&coinc_nfolds,
+                  WavelengthCalibration calibration);
         Tpx3Image(const Tpx3Image &rhs) = delete; // this object is large; better to avoid unnecessary copies
         ~Tpx3Image() = default;
 
@@ -116,6 +124,8 @@ namespace spec_hom {
         [[nodiscard]] unsigned long numRawPackets() const;
         [[nodiscard]] unsigned long numClusters() const;
         [[nodiscard]] bool empty() const;
+
+        void imageBounds(double &minWl, double &maxWl) const;
 
         [[nodiscard]] ImageXY<unsigned> rawPacketImage() const;
         [[nodiscard]] std::pair<QVector<double>, QVector<double>> toTDistribution(unsigned hist_bin_size = 1) const;
@@ -138,6 +148,7 @@ namespace spec_hom {
         std::vector<CoincidencePair> mCoincidencePairs;
         std::vector<CoincidenceNFold> mCoincidenceNFold;
         std::vector<SpectrumPair> mBiphotonClicks;
+        WavelengthCalibration mCalibration;
     };
 
     // Loads a given file into a vector of PixelData's

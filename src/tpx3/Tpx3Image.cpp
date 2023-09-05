@@ -9,14 +9,15 @@ using namespace spec_hom;
 
 Tpx3Image::Tpx3Image(std::string fname, PixelData &&raw_data, ClusterData &&clusters,
                      std::vector<ClusterCentroid> &&centroids, std::vector<CoincidencePair> &&coinc_pairs,
-                     std::vector<CoincidenceNFold> &&coinc_nfolds) :
+                     std::vector<CoincidenceNFold> &&coinc_nfolds, WavelengthCalibration calibration) :
         mFileName(std::move(fname)),
         mRawData(std::move(raw_data)),
         mClusters(std::move(clusters)),
         mCentroids(std::move(centroids)),
         mCoincidencePairs(std::move(coinc_pairs)),
         mCoincidenceNFold(std::move(coinc_nfolds)),
-        mBiphotonClicks() {
+        mBiphotonClicks(),
+        mCalibration(calibration) {
 
     initializeSpectrum();
 
@@ -248,15 +249,31 @@ ImageXY<unsigned> Tpx3Image::spatialCorrelations() const {
     ImageXY<unsigned> pixel_counts;
     pixel_counts.insert(pixel_counts.begin(), Tpx3Image::SPATIAL_CORR_SIZE, r);
 
+    double min_wl, max_wl;
+    imageBounds(min_wl, max_wl);
+    double image_size = max_wl - min_wl;
+
     for(auto &biphoton : mBiphotonClicks) {
-        auto px_x = static_cast<unsigned>(biphoton.wl_1 / PIXEL_SIZE * Tpx3Image::SPATIAL_CORR_SIZE / TPX3_SENSOR_SIZE);
-        auto px_y = static_cast<unsigned>(biphoton.wl_2 / PIXEL_SIZE * Tpx3Image::SPATIAL_CORR_SIZE / TPX3_SENSOR_SIZE);
+        auto px_x = static_cast<unsigned>((biphoton.wl_1 - min_wl) / image_size * Tpx3Image::SPATIAL_CORR_SIZE);
+        auto px_y = static_cast<unsigned>((biphoton.wl_2 - min_wl) / image_size * Tpx3Image::SPATIAL_CORR_SIZE);
 
         if(biphoton.channel_1 != biphoton.channel_2)
             ++pixel_counts[px_x][px_y];
     }
 
     return pixel_counts;
+
+}
+
+double calibrate(WavelengthCalibration calib, int channel, double bin) {
+
+    if(channel == 1) {
+        return calib.slope1 * (bin / PIXEL_SIZE) + calib.intercept1;
+    } else if (channel == 2) {
+        return calib.slope2 * (bin / PIXEL_SIZE) + calib.intercept2;
+    } else {
+        throw std::runtime_error("calibrate(): Channel " + std::to_string(channel) + " not recognized");
+    }
 
 }
 
@@ -302,7 +319,6 @@ void Tpx3Image::initializeSpectrum() {
         int channel1 = lines.closestLine(centroid1.x, centroid1.y);
         int channel2 = lines.closestLine(centroid2.x, centroid2.y);
 
-        // TODO: wavelength correction
         double pix1, pix2;
         if(h_lines) {
             pix1 = centroid1.x;
@@ -313,8 +329,8 @@ void Tpx3Image::initializeSpectrum() {
         }
 
         mBiphotonClicks.push_back({
-            pix1,
-            pix2,
+            calibrate(mCalibration, channel1, pix1),
+            calibrate(mCalibration, channel2, pix2),
             channel1,
             channel2
         });
@@ -324,7 +340,11 @@ void Tpx3Image::initializeSpectrum() {
 
 void Tpx3Image::saveTo(const std::string &coinc_path, const std::string &singles_path) const {
 
+    double wl_min, wl_max;
+    imageBounds(wl_min, wl_max);
+
     std::ofstream coinc_file(coinc_path);
+    coinc_file << "Min Wavelength [nm], " << wl_min << ", Max Wavelength [nm], " << wl_max << "\n";
     coinc_file << "Channel 1, Channel 2, Wavelength 1, Wavelength 2\n";
     for(auto &biphoton : mBiphotonClicks)
         coinc_file << biphoton.channel_1 << ", " << biphoton.channel_2 << ", " << biphoton.wl_1 << ", " << biphoton.wl_2 << "\n";
@@ -335,5 +355,15 @@ void Tpx3Image::saveTo(const std::string &coinc_path, const std::string &singles
     for(auto &cluster : mCentroids)
         singles_file << cluster.x << ", " << cluster.y << "\n";
     singles_file << std::flush;
+
+}
+
+void Tpx3Image::imageBounds(double &minWl, double &maxWl) const {
+
+    double max_bin = TPX3_SENSOR_SIZE - 1;
+
+    minWl = std::min(mCalibration.intercept1, mCalibration.intercept2);
+    maxWl = std::max(mCalibration.intercept1 + mCalibration.slope1*max_bin,
+                     mCalibration.intercept2 + mCalibration.slope2*max_bin);
 
 }

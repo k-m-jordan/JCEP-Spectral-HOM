@@ -154,6 +154,8 @@ PixelData LoadRawFileThread::parseRawData() {
                             static_cast<uint8_t>(((addr >> 8) & 0xFE) | ((addr >> 2) & 0x0001))
                     };
 
+                    addr_2d.y = TPX3_SENSOR_SIZE - 1 - addr_2d.y; // flip y direction
+
                     uint8_t mask_ix;
                     if(mask.vertical)
                         mask_ix = addr_2d.x;
@@ -612,7 +614,8 @@ void LoadRawFileThread::finish(PixelData &&data, ClusterData &&clusters, std::ve
     emit setProgressIndefinite(true);
 
     std::unique_ptr<Tpx3Image> image = std::make_unique<Tpx3Image>(mFileName, std::move(data), std::move(clusters),
-                                                                   std::move(centroids), std::move(coinc_pairs), std::move(coinc_nfolds));
+                                                                   std::move(centroids), std::move(coinc_pairs), std::move(coinc_nfolds),
+                                                                   mImportSettings.calibration);
 
     emit yieldPixelData(image.release());
 

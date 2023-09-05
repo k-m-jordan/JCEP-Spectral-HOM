@@ -73,6 +73,22 @@ FileInputSettingsPanel::FileInputSettingsPanel(QWidget *parent, AppActions &acti
         mCoincidenceWindowLabel(new QLabel(mCoincidenceWindowWidget)),
         mCoincidenceWindowEdit(new QLineEdit(mCoincidenceWindowWidget)),
 
+        mCalibrationSettingsWidget(new QGroupBox(this)),
+        mCalibrationSettingsLayout(new QVBoxLayout(mCalibrationSettingsWidget)),
+        mCalibration1Widget(new QWidget(mCalibrationSettingsWidget)),
+        mCalibration1Layout(new QHBoxLayout(mCalibration1Widget)),
+        mCalibrationSlope1Label(new QLabel(mCalibration1Widget)),
+        mCalibrationSlope1Edit(new QLineEdit(mCalibration1Widget)),
+        mCalibrationIntercept1Label(new QLabel(mCalibration1Widget)),
+        mCalibrationIntercept1Edit(new QLineEdit(mCalibration1Widget)),
+        mCalibration2Widget(new QWidget(mCalibrationSettingsWidget)),
+        mCalibration2Layout(new QHBoxLayout(mCalibration2Widget)),
+        mCalibrationSlope2Label(new QLabel(mCalibration2Widget)),
+        mCalibrationSlope2Edit(new QLineEdit(mCalibration2Widget)),
+        mCalibrationIntercept2Label(new QLabel(mCalibration2Widget)),
+        mCalibrationIntercept2Edit(new QLineEdit(mCalibration2Widget)),
+        mLoadCalibrationBtn(new QPushButton(mCalibrationSettingsWidget)),
+
         mBottomText(new QLabel(this)){
 
     for(auto &x : mCurrCalibration) // default is to do nothing
@@ -156,7 +172,7 @@ FileInputSettingsPanel::FileInputSettingsPanel(QWidget *parent, AppActions &acti
 
                 mMinClusterSizeLabel->setText("Minimum number of counts in a cluster: ");
                 mMinClusterSizeEdit->setRange(1, 99);
-                mMinClusterSizeEdit->setValue(4);
+                mMinClusterSizeEdit->setValue(1);
                 mMinClusterSizeEdit->setMaximumSize(mMinClusterSizeEdit->size());
 
             mMinClusterSizeLayout->addWidget(mMinClusterSizeLabel);
@@ -184,10 +200,53 @@ FileInputSettingsPanel::FileInputSettingsPanel(QWidget *parent, AppActions &acti
 
         mCoincidenceSettingsLayout->addWidget(mCoincidenceWindowWidget);
 
+        mCalibrationSettingsWidget->setTitle("Wavelength Calibration");
+        mCalibrationSettingsWidget->setStyleSheet("QGroupBox { font-weight: bold; }");
+        mCalibrationSettingsWidget->setLayout(mCalibrationSettingsLayout);
+        mCalibrationSettingsWidget->setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Maximum);
+
+            mCalibration1Widget->setLayout(mCalibration1Layout);
+
+                mCalibrationSlope1Label->setText("Channel 1 Slope [nm/px]: ");
+                mCalibrationSlope1Edit->setValidator(new QDoubleValidator(0.1, 10000, 1, mCoincidenceWindowEdit));
+                mCalibrationSlope1Edit->setText("1");
+
+                mCalibrationIntercept1Label->setText("Channel 1 Intercept [nm]: ");
+                mCalibrationIntercept1Edit->setValidator(new QDoubleValidator(0.1, 10000, 1, mCoincidenceWindowEdit));
+                mCalibrationIntercept1Edit->setText("0");
+
+            mCalibration1Layout->addWidget(mCalibrationSlope1Label);
+            mCalibration1Layout->addWidget(mCalibrationSlope1Edit);
+            mCalibration1Layout->addWidget(mCalibrationIntercept1Label);
+            mCalibration1Layout->addWidget(mCalibrationIntercept1Edit);
+
+            mCalibration2Widget->setLayout(mCalibration2Layout);
+
+                mCalibrationSlope2Label->setText("Channel 2 Slope [nm/px]: ");
+                mCalibrationSlope2Edit->setValidator(new QDoubleValidator(0.1, 10000, 1, mCoincidenceWindowEdit));
+                mCalibrationSlope2Edit->setText("1");
+
+                mCalibrationIntercept2Label->setText("Channel 2 Intercept [nm]: ");
+                mCalibrationIntercept2Edit->setValidator(new QDoubleValidator(0.1, 10000, 1, mCoincidenceWindowEdit));
+                mCalibrationIntercept2Edit->setText("0");
+
+            mCalibration2Layout->addWidget(mCalibrationSlope2Label);
+            mCalibration2Layout->addWidget(mCalibrationSlope2Edit);
+            mCalibration2Layout->addWidget(mCalibrationIntercept2Label);
+            mCalibration2Layout->addWidget(mCalibrationIntercept2Edit);
+
+            mLoadCalibrationBtn->setText("Load From File");
+            connect(mLoadCalibrationBtn, &QPushButton::clicked, this, &FileInputSettingsPanel::loadCalibrationFileClick);
+
+        mCalibrationSettingsLayout->addWidget(mCalibration1Widget);
+        mCalibrationSettingsLayout->addWidget(mCalibration2Widget);
+        mCalibrationSettingsLayout->addWidget(mLoadCalibrationBtn);
+
     mLayout->addWidget(mGeneralSettingsWidget);
     mLayout->addWidget(mToTCorrectionSettingsWidget);
     mLayout->addWidget(mClusteringSettingsWidget);
     mLayout->addWidget(mCoincidenceSettingsWidget);
+    mLayout->addWidget(mCalibrationSettingsWidget);
     mLayout->addWidget(new QWidget());
     mLayout->addWidget(mBottomText);
 
@@ -220,6 +279,11 @@ Tpx3ImportSettings FileInputSettingsPanel::getSettings() {
 
     double coincidenceWindow = std::stod(mCoincidenceWindowEdit->text().toStdString());
 
+    double ch1Slope = std::stod(mCalibrationSlope1Edit->text().toStdString());
+    double ch1Intercept = std::stod(mCalibrationIntercept1Edit->text().toStdString());
+    double ch2Slope = std::stod(mCalibrationSlope2Edit->text().toStdString());
+    double ch2Intercept = std::stod(mCalibrationIntercept2Edit->text().toStdString());
+
     return {
         maxNumThreads,
         mask,
@@ -230,7 +294,14 @@ Tpx3ImportSettings FileInputSettingsPanel::getSettings() {
         clusterWindowT,
         minClusterSize,
 
-        coincidenceWindow*1e-9
+        coincidenceWindow*1e-9,
+
+        {
+                ch1Slope,
+                ch1Intercept,
+                ch2Slope,
+                ch2Intercept
+        }
     };
 
 }
@@ -253,6 +324,10 @@ void FileInputSettingsPanel::setImageMaskClick() {
             false,
             0, Tpx3Image::WIDTH,
             0, Tpx3Image::WIDTH
+    };
+    import_settings.calibration = {
+            1, 0,
+            1, 0
     };
 
     mActions.lockUiForMasking->trigger();
@@ -360,5 +435,68 @@ void FileInputSettingsPanel::receiveImageMask(spec_hom::SpatialMask mask, std::s
     mCurrImageMask = std::make_unique<SpatialMask>(mask);
     auto new_label = "<b>(" + filename + ")</b>";
     mSpatialMaskCurrLabel->setText(new_label.c_str());
+
+}
+
+// Simple linear regression
+void linfit(const std::vector<double> &x, const std::vector<double> &y, double &m, double &b) {
+
+    double x1 = 0, x2 = 0, y1 = 0, xy = 0;
+    double n = x.size();
+    assert(x.size() == y.size()); // vectors must be same length
+    for(unsigned ix = 0; ix < x.size(); ++ix) {
+        x1 += x[ix];
+        x2 += x[ix]*x[ix];
+        y1 += y[ix];
+        xy += x[ix]*y[ix];
+    }
+
+    b = (xy*x1 - x2*y1)/(x1*x1 - n*x2);
+    m = (y1 - n*b)/x1;
+
+}
+
+void FileInputSettingsPanel::loadCalibrationFileClick() {
+
+    auto filename = QFileDialog::getOpenFileName(
+            this,
+            "Select Calibration File",
+            "./data",
+            "Wavelength Calibration Files (*.calib.csv)"
+    );
+
+    if(filename.isEmpty())
+        return;
+
+    // read the file
+    std::ifstream input(filename.toStdString());
+    std::string line;
+
+    std::vector<double> channel1, channel2, wavelengths;
+
+    std::getline(input, line); // skip header line
+    while(std::getline(input, line)) {
+        std::vector<std::string> row;
+        std::stringstream row_stream(line);
+        std::string elem;
+        while(std::getline(row_stream, elem, ','))
+            row.push_back(std::move(elem));
+
+        if(row.size() != 3)
+            throw std::runtime_error("Incorrect wavelength calibration format.");
+
+        wavelengths.push_back(std::stod(row[0]));
+        channel1.push_back(std::stod(row[1]));
+        channel2.push_back(std::stod(row[2]));
+    }
+
+    double slope1, intercept1, slope2, intercept2;
+    linfit(channel1, wavelengths, slope1, intercept1);
+    linfit(channel2, wavelengths, slope2, intercept2);
+
+    mCalibrationSlope1Edit->setText(QString::number(slope1));
+    mCalibrationIntercept1Edit->setText(QString::number(intercept1));
+    mCalibrationSlope2Edit->setText(QString::number(slope2));
+    mCalibrationIntercept2Edit->setText(QString::number(intercept2));
 
 }
