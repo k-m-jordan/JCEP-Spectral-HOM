@@ -147,6 +147,7 @@ void MainWindow::exportAllData() {
 
     mLogPanel->log("Exporting to " + folder.toStdString() + "...");
 
+    
     QProgressDialog progbar("Exporting cluster data...", "Cancel", 0, mOpenImages.size(), this);
     progbar.setWindowModality(Qt::WindowModal);
     progbar.setWindowTitle("Exporting Data...");

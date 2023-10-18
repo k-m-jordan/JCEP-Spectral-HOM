@@ -1,5 +1,6 @@
 #include "tpx3.h"
 
+#include <algorithm>
 #include <iostream>
 #include <vector>
 #include <filesystem>
@@ -256,6 +257,9 @@ ImageXY<unsigned> Tpx3Image::spatialCorrelations() const {
     for(auto &biphoton : mBiphotonClicks) {
         auto px_x = static_cast<unsigned>((biphoton.wl_1 - min_wl) / image_size * Tpx3Image::SPATIAL_CORR_SIZE);
         auto px_y = static_cast<unsigned>((biphoton.wl_2 - min_wl) / image_size * Tpx3Image::SPATIAL_CORR_SIZE);
+
+        px_x = std::min(px_x, static_cast<unsigned>(Tpx3Image::SPATIAL_CORR_SIZE)-1);
+        px_y = std::min(px_y, static_cast<unsigned>(Tpx3Image::SPATIAL_CORR_SIZE)-1);
 
         if(biphoton.channel_1 != biphoton.channel_2)
             ++pixel_counts[px_x][px_y];
